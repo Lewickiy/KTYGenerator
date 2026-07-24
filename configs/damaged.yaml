@@ -1,0 +1,25 @@
+# Конфигурация КТЯ — повреждённая коробка
+
+box:
+  length: 600
+  width: 400
+  height: 400
+
+state:
+  type: damaged
+  damage_level: 0.6
+
+lod:
+  quality: high
+
+export:
+  enabled: true
+  blend: true
+  obj: true
+  fbx: false
+  glb: false
+
+render:
+  enabled: true
+
+seed: 42

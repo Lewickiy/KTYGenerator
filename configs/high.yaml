@@ -1,0 +1,27 @@
+# Конфигурация генератора КТЯ (Procedural KTY Generator)
+# Версия: 1.2
+
+box:
+  length: 600       # Длина коробки (мм)
+  width: 400        # Ширина коробки (мм)
+  height: 400       # Высота коробки (мм)
+
+state:
+  type: closed      # Состояние: closed, open, damaged
+  lid_angle: 90     # Угол открытия крышки (0-180, только для OPEN)
+  damage_level: 0.0 # Уровень повреждений (0.0-1.0, только для DAMAGED)
+
+lod:
+  quality: high     # Уровень детализации: ultra-low, low, medium, high, ultra-high
+
+export:
+  enabled: true     # Включить экспорт
+  blend: true       # Экспорт в .blend (обязательный)
+  obj: true         # Экспорт в .obj
+  fbx: false        # Экспорт в .fbx
+  glb: false        # Экспорт в .glb
+
+render:
+  enabled: true     # Включить рендеринг
+
+seed: 42            # Seed для повторяемости (опционально)

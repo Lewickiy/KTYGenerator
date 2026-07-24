@@ -1,0 +1,24 @@
+# Сгенерированные модели и рендеры
+exports/
+renders/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+env/
+venv/
+
+# macOS
+.DS_Store
+
+# Blender
+*.blend1
+*.blend2

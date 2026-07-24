@@ -1,0 +1,22 @@
+# Конфигурация КТЯ — Ultra Low (для массовой симуляции)
+
+box:
+  length: 600
+  width: 400
+  height: 400
+
+state:
+  type: closed
+
+lod:
+  quality: ultra-low
+
+export:
+  enabled: true
+  blend: true
+  obj: false
+  fbx: false
+  glb: false
+
+render:
+  enabled: false
