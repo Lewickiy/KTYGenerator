@@ -1,0 +1,13 @@
+box:
+  length: 600
+  width: 400
+  height: 400
+state:
+  type: open
+  lidAngle: 115
+lod:
+  quality: high
+export:
+  blend: true
+render:
+  enabled: true
