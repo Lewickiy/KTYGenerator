@@ -77,6 +77,7 @@ class KTY:
             bsdf.inputs["Roughness"].default_value = roughness
             bsdf.inputs["Metallic"].default_value = 0
             return material
+
         self.card = mat("corrugated_cardboard_outer", (0.55, 0.34, 0.16, 1), 0.88)
         self.inner = mat("lighter_raw_cardboard_inner", (0.72, 0.52, 0.28, 1), 0.93)
         self.edge = mat("dark_exposed_corrugation_and_tears", (0.23, 0.14, 0.07, 1), 0.96)
@@ -104,7 +105,8 @@ class KTY:
         if self.config.quality in {"medium", "high", "ultra-high"}:
             self._creases(l, w, h)
 
-    def _panel(self, name: str, loc: tuple[float, float, float], scale: tuple[float, float, float], material: Any) -> Any:
+    def _panel(self, name: str, loc: tuple[float, float, float], scale: tuple[float, float, float],
+               material: Any) -> Any:
         bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
         obj = bpy.context.object
         obj.name = name
@@ -129,37 +131,56 @@ class KTY:
         if state == "damaged":
             angle = 38 + 35 * self.config.damage_level
 
+        # Размеры клапанов как у реальной четырёхклапанной КТЯ
+        #
+        # Длинные клапаны:
+        # закрывают половину ширины коробки
+        #
+        # Малые клапаны:
+        # короче, чтобы не замыкаться друг с другом
+        long_flap_depth = w * 0.5
+        short_flap_depth = l * 0.33
+
         flap_defs = [
-            # name, hinge position, local flap center, size, axis, direction
+            # name,
+            # hinge position,
+            # local center relative to hinge,
+            # dimensions,
+            # rotation axis,
+            # direction
+
             (
                 "front_flap",
                 (0, -w / 2, h),
-                (0, w / 4, 0),
-                (l, w / 2, t),
+                (0, long_flap_depth / 2, 0),
+                (l, long_flap_depth, t),
                 "X",
                 -1,
             ),
+
             (
                 "back_flap",
                 (0, w / 2, h),
-                (0, -w / 4, 0),
-                (l, w / 2, t),
+                (0, -long_flap_depth / 2, 0),
+                (l, long_flap_depth, t),
                 "X",
                 1,
             ),
+
             (
                 "left_flap",
                 (-l / 2, 0, h),
-                (l / 4, 0, 0),
-                (l / 2, w, t),
+                (short_flap_depth / 2, 0, 0),
+                (short_flap_depth, w, t),
                 "Y",
                 1,
             ),
+
             (
                 "right_flap",
                 (l / 2, 0, h),
-                (-l / 4, 0, 0),
-                (l / 2, w, t),
+                (-short_flap_depth / 2, 0, 0),
+                (short_flap_depth, w, t),
                 "Y",
                 -1,
             ),
@@ -167,7 +188,7 @@ class KTY:
 
         for name, hinge_loc, local_loc, scale, axis, direction in flap_defs:
 
-            # Создаём шарнир в линии сгиба
+            # Шарнир на линии сгиба
             hinge = bpy.data.objects.new(
                 f"{name}_hinge",
                 None
@@ -177,7 +198,7 @@ class KTY:
 
             hinge.location = hinge_loc
 
-            # Создаём клапан в локальных координатах шарнира
+            # Создание клапана относительно шарнира
             obj = self._panel(
                 f"{name}_{state}",
                 (0, 0, 0),
@@ -185,18 +206,17 @@ class KTY:
                 self.inner if angle else self.card
             )
 
-            # Привязываем клапан к шарниру
             obj.parent = hinge
 
-            # Положение относительно линии сгиба
+            # Смещение от линии сгиба
             obj.location = local_loc
 
-            # Открытие клапана
+            # Открытие
             rotation = math.radians(direction * angle)
 
             if axis == "X":
                 hinge.rotation_euler[0] = rotation
-            elif axis == "Y":
+            else:
                 hinge.rotation_euler[1] = rotation
 
     def _damage(self, l: float, w: float, h: float, t: float) -> None:
@@ -205,11 +225,15 @@ class KTY:
             if "wall" in obj.name or "flap" in obj.name:
                 obj.rotation_euler[2] += self.rng.uniform(-0.09, 0.09) * d
                 obj.location.z += self.rng.uniform(-0.035, 0.01) * d
-        for i, (x, y) in enumerate([(l/2, w/2), (-l/2, w/2), (l/2, -w/2)]):
-            dent = self._panel(f"crushed_corner_dent_{i}", (x * 0.96, y * 0.96, h * (0.72 + i * 0.08)), (0.09*d, 0.035, 0.16*d), self.edge)
-            dent.rotation_euler = (self.rng.uniform(-0.5, 0.5), self.rng.uniform(-0.7, 0.7), self.rng.uniform(-0.8, 0.8))
+        for i, (x, y) in enumerate([(l / 2, w / 2), (-l / 2, w / 2), (l / 2, -w / 2)]):
+            dent = self._panel(f"crushed_corner_dent_{i}", (x * 0.96, y * 0.96, h * (0.72 + i * 0.08)),
+                               (0.09 * d, 0.035, 0.16 * d), self.edge)
+            dent.rotation_euler = (self.rng.uniform(-0.5, 0.5), self.rng.uniform(-0.7, 0.7),
+                                   self.rng.uniform(-0.8, 0.8))
         for i in range(5):
-            tear = self._panel(f"jagged_dark_tear_{i}", (self.rng.uniform(-l*.35,l*.35), -w/2-.009, self.rng.uniform(h*.35,h*.95)), (0.012, 0.006, 0.08*d), self.edge)
+            tear = self._panel(f"jagged_dark_tear_{i}",
+                               (self.rng.uniform(-l * .35, l * .35), -w / 2 - .009, self.rng.uniform(h * .35, h * .95)),
+                               (0.012, 0.006, 0.08 * d), self.edge)
             tear.rotation_euler[2] = self.rng.uniform(-0.7, 0.7)
 
     def _creases(self, l: float, w: float, h: float) -> None:
@@ -219,12 +243,70 @@ class KTY:
             self._panel(f"vertical_manufacturing_seam_{i}", (x, w / 2 + .007, h / 2), (.006, .004, h * .82), self.edge)
 
     def _add_scene(self) -> None:
-        bpy.ops.object.light_add(type="AREA", location=(0, -1.8, 2.4))
-        bpy.context.object.name = "large_softbox_reflections_on_cardboard"
-        bpy.context.object.data.energy = 420
-        bpy.context.object.data.size = 4
-        bpy.ops.object.camera_add(location=(1.05, -1.35, .82), rotation=(math.radians(62), 0, math.radians(39)))
-        bpy.context.scene.camera = bpy.context.object
+        # Освещение
+        bpy.ops.object.light_add(type="AREA", location=(0, -2.5, 2.5))
+        light = bpy.context.object
+        light.name = "large_softbox_reflections_on_cardboard"
+        light.data.energy = 420
+        light.data.size = 4
+
+        # Получаем общий центр всех объектов
+        min_corner = Vector((float("inf"), float("inf"), float("inf")))
+        max_corner = Vector((float("-inf"), float("-inf"), float("-inf")))
+
+        for obj in self.objects:
+            if obj.type != "MESH":
+                continue
+
+            for corner in obj.bound_box:
+                world_corner = obj.matrix_world @ Vector(corner)
+
+                min_corner = Vector((
+                    min(min_corner.x, world_corner.x),
+                    min(min_corner.y, world_corner.y),
+                    min(min_corner.z, world_corner.z),
+                ))
+
+                max_corner = Vector((
+                    max(max_corner.x, world_corner.x),
+                    max(max_corner.y, world_corner.y),
+                    max(max_corner.z, world_corner.z),
+                ))
+
+        center = (min_corner + max_corner) / 2
+        size = max_corner - min_corner
+
+        # Диагональ объекта
+        radius = size.length
+
+        # Камера на изометрическом ракурсе
+        camera_distance = radius * 2.4
+
+        camera_location = center + Vector((
+            camera_distance * 0.8,
+            -camera_distance * 0.9,
+            camera_distance * 0.65,
+        ))
+
+        bpy.ops.object.camera_add(
+            location=camera_location
+        )
+
+        camera = bpy.context.object
+        camera.name = "auto_centered_product_camera"
+
+        # Наводим камеру на объект
+        direction = center - camera.location
+        camera.rotation_euler = direction.to_track_quat(
+            "-Z",
+            "Y"
+        ).to_euler()
+
+        camera.data.lens = 55
+
+        bpy.context.scene.camera = camera
+
+        # Настройки рендера
         bpy.context.scene.render.resolution_x = 1400
         bpy.context.scene.render.resolution_y = 1000
 
@@ -238,7 +320,9 @@ class KTY:
 
     def _visual_notes(self) -> list[str]:
         if self.config.state == "open":
-            return ["four top flaps rotated outward", "lighter inner cardboard is visible", "open rim exposes box volume"]
+            return ["four top flaps rotated outward", "lighter inner cardboard is visible",
+                    "open rim exposes box volume"]
         if self.config.state == "damaged":
-            return ["flaps sag irregularly", "corners include dark crushed dents", "front face includes jagged tear strips"]
+            return ["flaps sag irregularly", "corners include dark crushed dents",
+                    "front face includes jagged tear strips"]
         return ["top flaps lie flat in transport-closed position"]
