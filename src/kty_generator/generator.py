@@ -119,21 +119,85 @@ class KTY:
 
     def _flaps(self, l: float, w: float, h: float, t: float) -> None:
         state = self.config.state
-        angle = self.config.lid_angle if self.config.lid_angle is not None else (115 if state == "open" else 0)
+
+        angle = (
+            self.config.lid_angle
+            if self.config.lid_angle is not None
+            else (115 if state == "open" else 0)
+        )
+
         if state == "damaged":
             angle = 38 + 35 * self.config.damage_level
+
         flap_defs = [
-            ("front_open_flap", (0, -w / 2 - w / 8, h), (l, w / 2, t), math.radians(-angle), "X"),
-            ("back_open_flap", (0, w / 2 + w / 8, h), (l, w / 2, t), math.radians(angle), "X"),
-            ("left_open_flap", (-l / 2 - l / 8, 0, h), (l / 2, w, t), math.radians(angle), "Y"),
-            ("right_open_flap", (l / 2 + l / 8, 0, h), (l / 2, w, t), math.radians(-angle), "Y"),
+            # name, hinge position, local flap center, size, axis, direction
+            (
+                "front_flap",
+                (0, -w / 2, h),
+                (0, w / 4, 0),
+                (l, w / 2, t),
+                "X",
+                -1,
+            ),
+            (
+                "back_flap",
+                (0, w / 2, h),
+                (0, -w / 4, 0),
+                (l, w / 2, t),
+                "X",
+                1,
+            ),
+            (
+                "left_flap",
+                (-l / 2, 0, h),
+                (l / 4, 0, 0),
+                (l / 2, w, t),
+                "Y",
+                1,
+            ),
+            (
+                "right_flap",
+                (l / 2, 0, h),
+                (-l / 4, 0, 0),
+                (l / 2, w, t),
+                "Y",
+                -1,
+            ),
         ]
-        for name, loc, scale, rot, axis in flap_defs:
-            obj = self._panel(name if angle else name.replace("open_", "closed_"), loc, scale, self.inner if angle else self.card)
+
+        for name, hinge_loc, local_loc, scale, axis, direction in flap_defs:
+
+            # Создаём шарнир в линии сгиба
+            hinge = bpy.data.objects.new(
+                f"{name}_hinge",
+                None
+            )
+
+            bpy.context.collection.objects.link(hinge)
+
+            hinge.location = hinge_loc
+
+            # Создаём клапан в локальных координатах шарнира
+            obj = self._panel(
+                f"{name}_{state}",
+                (0, 0, 0),
+                scale,
+                self.inner if angle else self.card
+            )
+
+            # Привязываем клапан к шарниру
+            obj.parent = hinge
+
+            # Положение относительно линии сгиба
+            obj.location = local_loc
+
+            # Открытие клапана
+            rotation = math.radians(direction * angle)
+
             if axis == "X":
-                obj.rotation_euler[0] = rot
-            else:
-                obj.rotation_euler[1] = rot
+                hinge.rotation_euler[0] = rotation
+            elif axis == "Y":
+                hinge.rotation_euler[1] = rotation
 
     def _damage(self, l: float, w: float, h: float, t: float) -> None:
         d = self.config.damage_level
