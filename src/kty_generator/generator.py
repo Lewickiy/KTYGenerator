@@ -138,7 +138,7 @@ class KTY:
         #
         # Малые клапаны:
         # короче, чтобы не замыкаться друг с другом
-        long_flap_depth = w * 0.5
+        long_flap_depth = w * 0.48
         short_flap_depth = l * 0.33
 
         flap_defs = [
